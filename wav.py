@@ -890,6 +890,8 @@ def wct(x1, y1, x2, y2, significance_level=0.95, normalize=True, result=None,
             kwargs['dt'] = dx1
         else:
             raise Warning, 'Time step of both series do not match.'
+    else:
+        dx1 = dx2 = kwargs['dt']
     if normalize:
         std1 = y1.std()
         std2 = y2.std()
