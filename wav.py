@@ -947,9 +947,12 @@ def wct(x1, y1, x2, y2, significance_level=0.95, normalize=True, result=None,
         freqs = W2['freqs']
     # Calculates the significance using Monte Carlo simulations with 95%
     # confidence as a function of scale.
-    a1, _, _ = ar1(y1)
-    a2, _, _ = ar1(y2)
-    sig = wct_significance(a1, a2, significance_level=0.95, **kwargs)
+    if significance_level:
+        a1, _, _ = ar1(y1)
+        a2, _, _ = ar1(y2)
+        sig = wct_significance(a1, a2, significance_level=0.95, **kwargs)
+    else:
+        sig = [None]
     
     if result == 'dictionary':
         result = dict(
