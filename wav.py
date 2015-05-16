@@ -53,7 +53,7 @@ __version__ = '$Revision: 3 $'
 # $Source$
 
 from numpy import (asarray, arange, array, argsort, arctanh, ceil, concatenate, conjugate, cos, diff, exp, intersect1d, isnan, isreal, log, log2, mod, ones, pi, prod, real, round, sort, sqrt, unique, zeros, polyval, nan, ma, floor, interp, loadtxt, savetxt, angle)
-from numpy.fft import fft, ifft, fftfreq
+from pyfftw.interfaces.numpy_fft import fft, ifft, fftfreq
 from numpy.random import randn
 from numpy.lib.polynomial import polyval
 from pylab import find
@@ -486,20 +486,17 @@ def cwt(signal, dt=1., dj=1./12, s0=-1, J=-1, wavelet=Morlet(), result=None):
     n0 = len(signal)                              # Original signal length.
     if s0 == -1: s0 = 2 * dt / wavelet.flambda()  # Smallest resolvable scale
     if J == -1: J = int(log2(n0 * dt / s0) / dj)  # Number of scales
-    N = 2 ** (int(log2(n0)) + 1)                  # Next higher power of 2.
-    signal_ft = fft(signal, N)                    # Signal Fourier transform
-    ftfreqs = 2 * pi * fftfreq(N, dt)             # Fourier angular frequencies
+    signal_ft = fft(signal, n0)                    # Signal Fourier transform
+    ftfreqs = 2 * pi * fftfreq(n0, dt)             # Fourier angular frequencies
 
     sj = s0 * 2. ** (arange(0, J+1) * dj)         # The scales
     freqs = 1. / (wavelet.flambda() * sj)         # As of Mallat 1999
 
     # Creates an empty wavlet transform matrix and fills it for every discrete
     # scale using the convolution theorem.
-    W = zeros((len(sj), N), 'complex')
-    for n, s in enumerate(sj):
-        psi_ft_bar = ((s * ftfreqs[1] * N) ** .5 * 
-            conjugate(wavelet.psi_ft(s * ftfreqs)))
-        W[n, :] = ifft(signal_ft * psi_ft_bar, N)
+    psi_ft_bar = ((1/freqs[:,None] * ftfreqs[1] * n0) ** .5 *
+                  conjugate(wavelet.psi_ft(1/freqs[:,None] * ftfreqs)))
+    W = ifft(signal_ft * psi_ft_bar)
 
     # Checks for NaN in transform results and removes them from the scales,
     # frequencies and wavelet transform.
@@ -521,8 +518,8 @@ def cwt(signal, dt=1., dj=1./12, s0=-1, J=-1, wavelet=Morlet(), result=None):
             freqs = freqs,
             #period = 1. / freqs,
             coi = coi,
-            signal_ft = signal_ft[1:N/2] / N ** 0.5,
-            ftfreqs = ftfreqs[1:N/2] / (2. * pi),
+            signal_ft = signal_ft[1:n0/2] / n0 ** 0.5,
+            ftfreqs = ftfreqs[1:n0/2] / (2. * pi),
             dt = dt,
             dj = dj,
             s0 = s0,
@@ -531,8 +528,8 @@ def cwt(signal, dt=1., dj=1./12, s0=-1, J=-1, wavelet=Morlet(), result=None):
         )
         return result
     else:
-        return (W[:, :n0], sj, freqs, coi, signal_ft[1:N/2] / N ** 0.5,
-                ftfreqs[1:N/2] / (2. * pi))
+        return (W[:, :n0], sj, freqs, coi, signal_ft[1:n0/2] / n0 ** 0.5,
+                ftfreqs[1:n0/2] / (2. * pi))
 
 
 def icwt(W, sj, dt, dj=0.25, w=Morlet()):
